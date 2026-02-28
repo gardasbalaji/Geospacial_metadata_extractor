@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+Pillow
+google-cloud-vision
+geopy
+python-multipart

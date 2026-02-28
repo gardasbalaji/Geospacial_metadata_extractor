@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geospatial Metadata Extractor</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+    <!-- Feather Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.1/feather.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+
+    <div id="app-container">
+        <!-- Sidebar -->
+        <aside class="glass-panel sidebar">
+            <header>
+                <div class="logo">
+                    <i data-feather="crosshair"></i>
+                    <h1>Geospatial Extractor</h1>
+                </div>
+                <p class="subtitle">Investigative Analysis Dashboard</p>
+            </header>
+
+            <div class="controls">
+                <div class="upload-area" id="drop-zone">
+                    <i data-feather="upload-cloud"></i>
+                    <p>Drop image files here</p>
+                    <span class="text-sm">or click to browse</span>
+                    <input type="file" id="file-input" multiple accept="image/*" hidden>
+                </div>
+
+                <button id="analyze-btn" class="btn primary" disabled>
+                    <i data-feather="activity"></i> Analyze Route
+                </button>
+            </div>
+
+            <div class="analysis-results" id="results-container" style="display: none;">
+                <h3><i data-feather="map"></i> Timeline</h3>
+                <div id="timeline" class="timeline-container">
+                    <!-- Timeline items injected here via JS -->
+                </div>
+                <div id="timeline-summary" class="timeline-summary"
+                    style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <!-- Summary injected here via JS -->
+                </div>
+            </div>
+
+            <div class="analysis-results" style="margin-top: 20px;">
+                <h3><i data-feather="external-link"></i> Actions</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                    <a href="/route-map" target="_blank" class="btn secondary"
+                        style="text-decoration:none; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(56, 189, 248, 0.2); border: 1px solid var(--accent);">
+                        <i data-feather="navigation"></i> Route Explorer
+                    </a>
+                    <a href="/analytics" target="_blank" class="btn secondary"
+                        style="text-decoration:none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i data-feather="pie-chart"></i> View Analytics
+                    </a>
+                    <a href="/api/download-pdf" target="_blank" class="btn secondary"
+                        style="text-decoration:none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i data-feather="file-text"></i> Download PDF
+                    </a>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Main Map Area -->
+        <main class="map-container">
+            <div id="map"></div>
+
+            <!-- Map Overlay Controls -->
+            <div class="glass-panel map-overlay top-right">
+                <div class="stat-box">
+                    <span class="stat-label">Total Points</span>
+                    <span class="stat-value" id="stat-points">0</span>
+                </div>
+                <div class="stat-box flagged" id="stat-flag-box" style="display: none;">
+                    <span class="stat-label">Anomalies</span>
+                    <span class="stat-value" id="stat-flags">0</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading" class="overlay glass-overlay hidden">
+            <div class="spinner"></div>
+            <p>Extracting Metadata & Running AI...</p>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="/static/js/map_controller.js?v=2"></script>
+    <script src="/static/js/app.js?v=2"></script>
+
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

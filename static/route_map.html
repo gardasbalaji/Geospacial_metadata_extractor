@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TraceSight AI - Route Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.1/feather.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --sidebar-bg: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: var(--sidebar-bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        #map {
+            flex-grow: 1;
+            z-index: 1;
+        }
+
+        .control-group {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+
+        select {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .info-card {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: auto;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .back-btn:hover {
+            opacity: 1;
+        }
+
+        .marker-number {
+            background: var(--accent);
+            color: #0f172a;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            border: 2px solid white;
+        }
+
+        /* Hide default routing control box on map */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+
+        #itinerary-target .leaflet-routing-container {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: var(--text) !important;
+        }
+
+        #itinerary-target .leaflet-routing-alt {
+            background: transparent !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        #itinerary-target table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #itinerary-target .leaflet-routing-instruction-text,
+        #itinerary-target .leaflet-routing-instruction-distance {
+            color: var(--text) !important;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #itinerary-target .leaflet-routing-icon {
+            filter: invert(1) brightness(2);
+            /* Make icons white */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <a href="/" class="back-btn"><i data-feather="arrow-left"></i> Main Dashboard</a>
+
+        <div>
+            <h1 style="margin:0; font-size: 1.5em;">Route Explorer</h1>
+            <p style="opacity:0.6; font-size: 0.8em;">Trace movement between captures</p>
+        </div>
+
+        <div class="control-group">
+            <label>From Point</label>
+            <select id="from-point"></select>
+
+            <label>To Point</label>
+            <select id="to-point"></select>
+
+            <button class="btn" onclick="calculateRoute()">Generate Route</button>
+        </div>
+
+        <div id="route-details" class="info-card" style="display: none; height: 100%; overflow-y: auto;">
+            <h3 style="margin:0"><i data-feather="clock"></i> Travel Info</h3>
+            <p id="duration-text" style="margin: 10px 0 5px 0; font-size: 2em; font-weight: 800; color: var(--accent);">
+                --</p>
+            <p id="distance-text" style="margin: 0; font-size: 1.1em; opacity: 0.8;">-- km</p>
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+            <p id="timestamp-diff" style="font-size: 0.8em; opacity: 0.6; line-height: 1.4; margin-bottom: 20px;"></p>
+
+            <div id="itinerary-target" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script>
+        let map, routingControl, points = [];
+
+        async function init() {
+            feather.replace();
+            map = L.map('map').setView([20, 80], 5);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+            // Initialize a single routing control but keep it hidden initially
+            routingControl = L.Routing.control({
+                waypoints: [],
+                routeWhileDragging: false,
+                addWaypoints: false,
+                show: false, // We handle our own itinerary display
+                lineOptions: {
+                    styles: [{ color: '#38bdf8', weight: 4, opacity: 0.8 }]
+                },
+                createMarker: function (i, wp) {
+                    return L.marker(wp.latLng, { opacity: 0, interactive: false });
+                }
+            }).addTo(map);
+
+            routingControl.on('routesfound', function (e) {
+                const routes = e.routes;
+                if (!routes || routes.length === 0) return;
+
+                const summary = routes[0].summary;
+                updateUISelection(summary);
+
+                // Reparent instructions
+                setTimeout(() => {
+                    const container = document.querySelector('.leaflet-routing-container');
+                    const target = document.getElementById('itinerary-target');
+                    if (container && target) {
+                        target.innerHTML = '';
+                        target.appendChild(container);
+                        container.style.display = 'block';
+                        container.querySelectorAll('*').forEach(el => el.style.color = 'var(--text)');
+                    }
+                }, 100);
+            });
+
+            routingControl.on('routingerror', function () {
+                alert("OSRM Routing Error. Please try different points or wait a moment.");
+            });
+
+            const resp = await fetch('/api/route-info');
+            const data = await resp.json();
+
+            if (data.status === 'success') {
+                points = data.points;
+                populateSelects();
+                plotMarkers();
+            }
+        }
+
+        function updateUISelection(summary, p1, p2) {
+            document.getElementById('duration-text').innerText = Math.round(summary.totalTime / 60) + " min";
+            document.getElementById('distance-text').innerText = (summary.totalDistance / 1000).toFixed(2) + " km";
+
+            // If p1/p2 aren't passed, we are being called from the event listener, so we grab them from current select values
+            if (!p1) {
+                p1 = points[document.getElementById('from-point').value];
+                p2 = points[document.getElementById('to-point').value];
+            }
+
+            if (p1 && p2 && p1.datetime && p2.datetime && p1.datetime !== 'Unknown' && p2.datetime !== 'Unknown') {
+                const d1 = new Date(p1.datetime);
+                const d2 = new Date(p2.datetime);
+                const diffHrs = Math.abs(d2 - d1) / (1000 * 60 * 60);
+                document.getElementById('timestamp-diff').innerHTML =
+                    `Time difference between captures:<br><b>${diffHrs.toFixed(1)} hours</b>`;
+            } else {
+                document.getElementById('timestamp-diff').innerText = "";
+            }
+            document.getElementById('route-details').style.display = 'block';
+        }
+
+        function populateSelects() {
+            const fromRel = document.getElementById('from-point');
+            const toRel = document.getElementById('to-point');
+
+            points.forEach((p, i) => {
+                const opt = `<option value="${i}">Point ${i + 1} (${p.datetime || 'No Date'})</option>`;
+                fromRel.innerHTML += opt;
+                toRel.innerHTML += opt;
+            });
+
+            if (points.length > 1) toRel.value = 1;
+        }
+
+        function plotMarkers() {
+            const bounds = [];
+            points.forEach((p, i) => {
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="marker-number">${i + 1}</div>`,
+                    iconSize: [30, 42],
+                    iconAnchor: [15, 42]
+                });
+
+                L.marker([p.latitude, p.longitude], { icon }).addTo(map)
+                    .bindPopup(`<b>Point ${i + 1}</b><br>${p.datetime}`);
+                bounds.push([p.latitude, p.longitude]);
+            });
+            if (bounds.length) map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        function calculateRoute() {
+            const p1Idx = document.getElementById('from-point').value;
+            const p2Idx = document.getElementById('to-point').value;
+            const p1 = points[p1Idx];
+            const p2 = points[p2Idx];
+
+            // If same point, bypass the engine to avoid null/error state
+            if (p1Idx === p2Idx) {
+                updateUISelection({ totalTime: 0, totalDistance: 0 }, p1, p2);
+                document.getElementById('itinerary-target').innerHTML = '<p style="text-align:center; opacity:0.6; padding:20px;">Same location selected.</p>';
+                routingControl.setWaypoints([]);
+                return;
+            }
+
+            // Update waypoints on the existing control instead of removing/re-adding
+            routingControl.setWaypoints([
+                L.latLng(p1.latitude, p1.longitude),
+                L.latLng(p2.latitude, p2.longitude)
+            ]);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TraceSight AI - Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.1/feather.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+
+        .back-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .card h3 { margin-top: 0; font-size: 1.1em; color: var(--accent); }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .mini-stat {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .mini-stat label { font-size: 0.8em; color: var(--text-muted); display: block; margin-bottom: 5px; }
+        .mini-stat span { font-size: 1.2em; font-weight: 600; }
+
+        .chart-container { position: relative; height: 250px; width: 100%; }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        .risk-High { background: #ef4444; color: white; }
+        .risk-Medium { background: #f59e0b; color: white; }
+        .risk-Low { background: #10b981; color: white; }
+
+        #no-data {
+            display: none;
+            text-align: center;
+            padding: 100px;
+            font-size: 1.5em;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 style="margin:0">Analytics Dashboard</h1>
+            <p style="color:var(--text-muted); margin: 5px 0 0 0;">Intelligence Analysis Overview</p>
+        </div>
+        <a href="/" class="back-btn"><i data-feather="arrow-left"></i> Back to Map</a>
+    </div>
+
+    <div id="no-data">
+        <i data-feather="info" style="width:48px; height:48px; margin-bottom:20px;"></i>
+        <p>No analysis data found. Please upload images on the main page first.</p>
+    </div>
+
+    <div class="dashboard-grid" id="dashboard">
+        <div class="card">
+            <h3>Key Statistics</h3>
+            <div class="stat-grid">
+                <div class="mini-stat">
+                    <label>Total Distance</label>
+                    <span id="stat-dist">0 km</span>
+                </div>
+                <div class="mini-stat">
+                    <label>Unique Locations</label>
+                    <span id="stat-unique">0</span>
+                </div>
+                <div class="mini-stat">
+                    <label>Total Movements</label>
+                    <span id="stat-move">0</span>
+                </div>
+                <div class="mini-stat">
+                    <label>Risk Level</label>
+                    <span id="stat-risk">-</span>
+                </div>
+            </div>
+            <div style="margin-top: 20px;" class="mini-stat">
+                <label>Most Visited Area</label>
+                <span id="stat-top" style="font-size:0.9em;">-</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Source Distribution</h3>
+            <div class="chart-container">
+                <canvas id="sourceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card" style="grid-column: span 1;">
+            <h3>Activity Time (Hour of Day)</h3>
+            <div class="chart-container">
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadAnalytics() {
+            const resp = await fetch('/api/analytics');
+            const data = await resp.json();
+
+            if (data.status === 'no_data') {
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('no-data').style.display = 'block';
+                return;
+            }
+
+            // Update Stats
+            document.getElementById('stat-dist').textContent = data.stats.total_distance_km + ' km';
+            document.getElementById('stat-unique').textContent = data.stats.unique_locations_count;
+            document.getElementById('stat-move').textContent = data.stats.total_movements;
+            document.getElementById('stat-top').textContent = data.stats.most_visited_location;
+            
+            const riskSpan = document.getElementById('stat-risk');
+            riskSpan.textContent = data.risk.risk_level;
+            riskSpan.className = 'risk-badge risk-' + data.risk.risk_level;
+
+            // Prepare Charts
+            renderSourceChart(data.points);
+            renderTimeChart(data.points);
+            feather.replace();
+        }
+
+        function renderSourceChart(points) {
+            const sources = {};
+            points.forEach(p => sources[p.source] = (sources[p.source] || 0) + 1);
+
+            new Chart(document.getElementById('sourceChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sources),
+                    datasets: [{
+                        data: Object.values(sources),
+                        backgroundColor: ['#38bdf8', '#818cf8', '#fb7185', '#34d399'],
+                        borderColor: 'transparent'
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#f1f5f9' } } }
+                }
+            });
+        }
+
+        function renderTimeChart(points) {
+            const hours = new Array(24).fill(0);
+            points.forEach(p => {
+                if (p.datetime && p.datetime !== 'Unknown') {
+                    const h = new Date(p.datetime).getHours();
+                    hours[h]++;
+                }
+            });
+
+            new Chart(document.getElementById('timeChart'), {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                    datasets: [{
+                        label: 'Activity Count',
+                        data: hours,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        loadAnalytics();
+        feather.replace();
+    </script>
+</body>
+</html>
